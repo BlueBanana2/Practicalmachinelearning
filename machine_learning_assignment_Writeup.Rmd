@@ -1,0 +1,65 @@
+---
+title: "Practical Machine Learning Assignment"
+author: "BlueBanana"
+date: "Wednesday, August 20, 2014"
+output: html_document
+keep_md: true
+---
+The first step is to embed the relevant libraries for machine learning. I also include a library to support multiple processors to speed up the calculation.
+
+```{r}
+library(AppliedPredictiveModeling)
+library(kernlab)
+library(caret)
+```
+
+Second step is to read in the training and test data:
+```{r}
+temp <- tempfile()
+download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",temp)
+training <- data.frame(read.table(temp, header = TRUE, sep = ","))
+download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",temp)
+test <- data.frame(read.table(temp, header = TRUE, sep = ","))
+```
+
+Here I subdivide the data into the training and test set.
+
+```{r}
+intrain<-createDataPartition(y=training$classe,p=0.75,list=FALSE)
+train2<-training[intrain,]
+test2<-training[-intrain,c(2,8,9,10,11,37:49,62:68,84:86)]
+testclasse<-training[-intrain,]
+```
+For the model I choose those variables that showed after an inspection at least some variance and are menaingful for the prediction.
+
+```{r}
+train3<- train2[,c(2,8,9,10,11,37:49,62:68,84:86)]
+```
+For the model estimation I choose the Random Forest method and estimate a model. I do a validation of the model fitness with the test data set.
+Finally the model is applied to the target set with the 20 entries. 
+```{r}
+set.seed(3333)
+
+modelfit <-train(x=train3,y=train2$classe,method="rf")
+
+predictions<-predict(modelfit,newdata=test2)
+a<-confusionMatrix(predictions,testclasse$classe)
+
+testvalues<-test[,c(2,8,9,10,11,37:49,62:68,84:86)]
+
+answers<-predict(modelfit,newdata=testvalues)
+```
+
+This is the last step, the Model output for the machine grading:
+```{r}
+  pml_write_files = function(x){
+    n = length(x)
+    for(i in 1:n){
+      filename = paste0("problem_id_",i,".txt")
+      write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+    }
+  }
+  
+  pml_write_files(answers)
+
+```
